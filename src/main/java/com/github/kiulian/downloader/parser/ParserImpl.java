@@ -97,22 +97,29 @@ public class ParserImpl implements Parser {
     public Response<VideoInfo> parseVideo(RequestVideoInfo request) {
         if (request.isAsync()) {
             ExecutorService executorService = config.getExecutorService();
-            Future<VideoInfo> result = executorService.submit(() -> parseVideo(request.getVideoId(), request.getCallback(), request.getClientType()));
+            Future<VideoInfo> result = executorService.submit(() -> parseVideo(request.getVideoId(), request.getCallback(), request.getClientType(), request.allowsWebParsing()));
             return ResponseImpl.fromFuture(result);
         }
         try {
-            VideoInfo result = parseVideo(request.getVideoId(), request.getCallback(), request.getClientType());
+            VideoInfo result = parseVideo(request.getVideoId(), request.getCallback(), request.getClientType(), request.allowsWebParsing());
             return ResponseImpl.from(result);
         } catch (YoutubeException e) {
             return ResponseImpl.error(e);
         }
     }
 
-    private VideoInfo parseVideo(String videoId, YoutubeCallback<VideoInfo> callback, ClientType client) throws YoutubeException {
+    private VideoInfo parseVideo(String videoId, YoutubeCallback<VideoInfo> callback, ClientType client, boolean allowsWebParsing) throws YoutubeException {
+        if (client == null && !allowsWebParsing) {
+            throw new IllegalArgumentException("Either a client has to be specified or web parsing has to be enabled.");
+        }
         // try to spoof android
         // workaround for issue https://github.com/sealedtx/java-youtube-downloader/issues/97
-        VideoInfo videoInfo = parseVideoAndroid(videoId, callback, client);
-        if (videoInfo == null) {
+        VideoInfo videoInfo = null;
+        if (client != null) {
+            videoInfo = parseVideoAndroid(videoId, callback, client);
+        }
+
+        if (videoInfo == null && allowsWebParsing) {
             videoInfo = parseVideoWeb(videoId, callback);
         }
         if (callback != null) {

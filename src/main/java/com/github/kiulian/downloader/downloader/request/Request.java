@@ -76,6 +76,12 @@ public abstract class Request<T extends Request<T, S>, S> {
         return async;
     }
 
+
+    /**
+     * Sets the client to be used when making an API request.
+     * The default value is {@code Clients.highestPriorityClientType()}
+     *
+     */
     public T clientType(ClientType client) {
         this.clientType = client;
         return (T) this;
